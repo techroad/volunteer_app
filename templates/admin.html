@@ -1,0 +1,38 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+    <div class="form-container">
+        <h2>Add a New Volunteering Task</h2>
+        <form method="POST" action="">
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" name="title" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="description" class="form-control" required></textarea>
+            </div>
+             <div class="form-group">
+                <label>Date</label>
+                <input type="date" name="event_date" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Location</label>
+                <input type="text" name="location" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Start Time</label>
+                <input type="text" name="event_start_time" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Duration</label>
+                <input type="text" name="event_duration" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>No of Volunteers</label>
+                <input type="text" name="no_of_volunteers_required" class="form-control" required>
+            </div>
+            <button type="submit" class="btn">Add Task</button>
+        </form>
+    </div>
+{% endblock %}

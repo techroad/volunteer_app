@@ -1,0 +1,30 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+    <h1>Upcoming Volunteer Opportunities</h1>
+    <div class="task-list">
+        {% for task in tasks %}
+            <div class="task-card">
+                <h2>{{ task.title }}</h2>
+                <p><strong>Date:</strong> {{ task.event_date.strftime('%A, %B %d, %Y') }}</p>
+                <p><strong>Duration</strong> {{ task.event_duration }}</p>
+                <p><strong>Location:</strong> {{ task.location }}</p>
+                <p><strong>Event Start Time</strong> {{ task.event_start_time }}</p>
+                <p><strong>Duration</strong> {{ task.event_duration}}</p>
+                <p><strong>No of volunteers required</strong> {{task.no_of_volunteers_required}}</p>
+                <p>{{ task.description }}</p>
+                {% if session.logged_in and not session.is_admin %}
+                    <form action="{{ url_for('signup', task_id=task.id) }}" method="POST">
+                        {% if task.id in signed_up_task_ids %}
+                             <button type="submit" class="btn" disabled>Already Signed Up</button>
+                        {% else %}
+                            <button type="submit" class="btn">Sign Up</button>
+                        {% endif %}
+                    </form>
+                {% endif %}
+            </div>
+        {% else %}
+            <p>No tasks available at the moment. Check back soon!</p>
+        {% endfor %}
+    </div>
+{% endblock %}
