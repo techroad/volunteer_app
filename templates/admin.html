@@ -1,38 +1,207 @@
 {% extends 'layout.html' %}
 
 {% block body %}
-    <div class="form-container">
-        <h2>Add a New Volunteering Task</h2>
+
+<div class="container mt-5">
+
+
+    <div class="row justify-content-center mb-5">
+        
+        <div class="col-md-4 mb-3">
+            <a href="#register_user_form" class="text-decoration-none">
+                <div class="card text-center border-primary shadow-sm h-100 tile-hover">
+                    <div class="card-body">
+                        <i class="fa fa-user-plus fa-3x mb-3 text-primary"></i>
+                        <h5 class="card-title">Register New User</h5>
+                        <p class="card-text text-muted">Create new volunteer or coordinator accounts.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <a href="#manage_user_form" class="text-decoration-none">
+                <div class="card text-center border-primary shadow-sm h-100 tile-hover">
+                    <div class="card-body">
+                        <i class="fa fa-user-plus fa-3x mb-3 text-primary"></i>
+                        <h5 class="card-title">Manage User</h5>
+                        <p class="card-text text-muted">Update/Delete User</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <a href="#approve_task_form" class="text-decoration-none">
+                <div class="card text-center border-success shadow-sm h-100 tile-hover">
+                    <div class="card-body">
+                        <i class="fa fa-calendar-plus fa-3x mb-3 text-success"></i>
+                        <h5 class="card-title">Pending Tasks For Approval</h5>
+                        <p class="card-text text-muted">Approve tasks to publish to volunteers</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <a href="#add_category_form" class="text-decoration-none">
+                <div class="card text-center border-info shadow-sm h-100 tile-hover">
+                    <div class="card-body">
+                        <i class="fa fa-tags fa-3x mb-3 text-info"></i>
+                        <h5 class="card-title">Add Categories</h5>
+                        <p class="card-text text-muted">Create or modify task categorization labels.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+    </div>
+   
+    <div class="container p-0">
+        {% if approvals %}
+            <table class="table table-striped table-hover border">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Volunteer Name</th>
+                        <th>Task Title</th>
+                        <th>Event Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in approvals %}
+                    <tr>
+                        <td>{{ item.ivu_username }}</td> 
+                        <td>{{ item.ivt_title }}</td>
+                        <td>{{ item.ivt_event_date.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <form action="{{ url_for('approve_signup', user_id=item.ivs_user_id,task_id=item.ivs_task_id) }}" method="POST" style="margin:0;">
+                                <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+
+    <div id="register_user_form" class="form-container mb-5 p-4 border rounded shadow-lg">
+        <h3 class="mb-4 text-primary">Register New User</h3>
         <form method="POST" action="">
-            <div class="form-group">
-                <label>Title</label>
-                <input type="text" name="title" class="form-control" required>
+            <input type="hidden" name="form_type" value="register_user"> 
+
+            <div class="form-group mb-3">
+                <label for="regUsername">Username</label>
+                <input type="text" name="username" class="form-control" id="regUsername" required>
             </div>
-            <div class="form-group">
-                <label>Description</label>
-                <textarea name="description" class="form-control" required></textarea>
+
+            <div class="form-group mb-3">
+                <label for="regEmail">Email</label>
+                <input type="email" name="email" class="form-control" id="regEmail" required>
             </div>
-             <div class="form-group">
-                <label>Date</label>
-                <input type="date" name="event_date" class="form-control" required>
+
+            <div class="form-group mb-3">
+                <label for="regPassword">Password</label>
+                <input type="password" name="password" class="form-control" id="regPassword" required>
             </div>
-            <div class="form-group">
-                <label>Location</label>
-                <input type="text" name="location" class="form-control" required>
+
+            <div class="form-group mb-3">
+                <label for="referredby">Referred by</label>
+                <input type="text" name="referredby" class="form-control" id="referredby" required> 
             </div>
-            <div class="form-group">
-                <label>Start Time</label>
-                <input type="text" name="event_start_time" class="form-control" required>
+
+            <div class="form-group form-check mb-4">
+                <input type="checkbox" class="form-check-input" id="coordinatorCheckbox" name="role" value="coordinator">
+                <label class="form-check-label" for="coordinatorCheckbox">Grant Coordinator Privileges</label> 
             </div>
-            <div class="form-group">
-                <label>Duration</label>
-                <input type="text" name="event_duration" class="form-control" required>
-            </div>
-            <div class="form-group">
-                <label>No of Volunteers</label>
-                <input type="text" name="no_of_volunteers_required" class="form-control" required>
-            </div>
-            <button type="submit" class="btn">Add Task</button>
+
+            <button type="submit" class="btn btn-primary w-100">Create User</button>
         </form>
     </div>
+
+    <div id="manage_user_form" class="form-container mb-5 p-4 border rounded shadow-lg">
+        <h3 class="mb-4 text-primary">Delete Existing User</h3>
+        <form method="POST" action="">
+            <input type="hidden" name="form_type" value="manage_user"> 
+
+            <div class="form-group mb-3">
+                <label for="manageUsername">Username</label>
+                <input type="text" name="username" class="form-control" id="manageUsername" required>
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="comment">Comment</label>
+                <input type="text" name="comment" class="form-control" id="comment" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary w-100">Delete User</button>
+        </form>
+    </div>
+
+
+    <hr class="my-5">
+
+
+    <div id="add_category_form" class="form-container mb-5 p-4 border rounded shadow-lg">
+        <h3 class="mb-4 text-info">Add New Category</h3>
+        
+        <form method="POST" action="">
+            <input type="hidden" name="form_type" value="add_category">
+            <div class="form-group mb-3">
+                <label>Category Name</label>
+                <input type="text" name="category_name" class="form-control" required>
+            </div>
+            
+            <button type="submit" class="btn btn-info w-100">Add Category</button>
+        </form>
+    </div>
+
+    <div id="approve_task_form" class="form-container mb-5 p-4 border rounded shadow-lg">
+    {% if pending_tasks %}
+        <table class="table table-striped table-hover border">
+            <thead class="thead-warning bg-warning text-dark">
+                <tr>
+                    <th>Task ID</th>
+                    <th>Title</th>
+                    <th>Coordinator</th>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in pending_tasks %}
+                <tr>
+                    <td><strong>{{ task.ivt_id }}</strong></td>
+                    <td><strong>{{ task.ivt_title }}</strong></td>
+                    <td><strong>{{ task.ivt_coordinator_poc }}</strong></td>
+                    <td>{{ task.ivt_event_date.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ task.ivt_description[:50] }}...</td> <td>
+                        <form action="{{ url_for('admin') }}" method="POST" style="margin:0;">
+                            <input type="hidden" name="form_type" value="approve_task">
+                            <input type="hidden" name="task_id" value="{{ task.ivt_id }}">
+                            <button type="submit" class="btn btn-success btn-sm w-100">Approve & Publish</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="alert alert-success">
+            All created tasks have been approved. No pending tasks at this time.
+        </div>
+    {% endif %}
+    </div>
+</div>
+
+<style>
+    .tile-hover:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+        transition: all 0.2s ease-in-out;
+    }
+</style>
+
 {% endblock %}
