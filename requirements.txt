@@ -2,3 +2,4 @@ Flask
 Flask-MySQLdb
 Flask-Login
 passlib
+pip install Flask Flask-MySQLdb Flask-Login passlib

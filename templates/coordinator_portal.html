@@ -1,0 +1,204 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+<div class="container mt-5">
+    <!--<h1 class="mb-4">Coordinator Portal</h1>-->
+    <hr>
+
+    {# --- TABS FOR ORGANIZED VIEW --- #}
+    <ul class="nav nav-tabs" id="coordinatorTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="add-task-tab" data-toggle="tab" href="#addTask" role="tab">Add New Volunteering Task</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="approve-signups-tab" data-toggle="tab" href="#approveSignups" role="tab">Approve User Signups <span class="badge badge-warning">{{ pending_signups | length }}</span></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="approve-tasks-tab" data-toggle="tab" href="#approveTasks" role="tab">Final Task Approval <span class="badge badge-danger">{{ final_approvals | length }}</span></a>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="coordinatorTabsContent">
+        
+        {# -------------------------------------------------------------------------------- #}
+        {# ADD NEW TASK FORM (Task Creation) #}
+        {# -------------------------------------------------------------------------------- #}
+
+        <div class="tab-pane fade show active p-3" id="addTask" role="tabpanel">
+            <h3 class="mt-4 mb-3">Add New Volunteering Task</h3>
+            <form method="POST" action="{{ url_for('coordinator_portal') }}" class="p-4 border rounded bg-light">
+                <input type="hidden" name="form_type" value="create_task">
+
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="title">Title</label>
+                        <input type="text" name="title" class="form-control" required>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="category">Category</label>
+                        <select name="category" class="form-control" required>
+                            {% for cat in categories %}
+                                <option value="{{ cat }}">{{ cat }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea name="description" class="form-control" rows="3" required></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="event_date">Date</label>
+                        <input type="date" name="event_date" class="form-control" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="event_start_time">Start Time</label>
+                        <input type="time" name="event_start_time" class="form-control" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="event_duration">Duration (Hours)</label>
+                        <input type="number" name="event_duration" class="form-control" min="0.5" step="0.5" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="location">Location</label>
+                    <input type="text" name="location" class="form-control" required>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="no_of_volunteers_required">Volunteers Required</label>
+                        <input type="number" name="no_of_volunteers_required" class="form-control" min="1" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="coordinator_poc">POC Name</label>
+                        <input type="text" name="coordinator_poc" class="form-control" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="assigned_coordinator">Assign Coordinator</label>
+                        <select name="assigned_coordinator" class="form-control" required>
+                            {% for coord in coordinators %}
+                                <option value="{{ coord }}">{{ coord }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-success btn-block mt-4">Create Task</button>
+            </form>
+        </div>
+
+        {# -------------------------------------------------------------------------------- #}
+        {# APPROVE SIGNUPS (Approval) #}
+        {# -------------------------------------------------------------------------------- #}
+        <div class="tab-pane fade p-3" id="approveSignups" role="tabpanel">
+            <h3 class="mt-4 mb-3">Pending Volunteer Signups</h3>
+            <p class="text-muted">These are signups requiring initial coordinator approval</p>
+
+            {% if pending_signups %}
+            <table class="table table-striped table-bordered">
+                <thead class="thead-dark">
+                    <tr>
+                        <th style="width: 30%;">User Details</th>
+                        <th style="width: 40%;">Task Details</th>
+                        <th>Event Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for signup in pending_signups %}
+                    <tr>
+                        <td>
+                            <strong>{{ signup.ivu_username }}</strong><br>
+                            <small class="text-muted">User ID: {{ signup.ivs_user_id }}</small>
+                        </td>
+                        <td>
+                            <strong>{{ signup.ivt_title }}</strong><br>
+                            <small class="text-muted">Task ID: {{ signup.ivs_task_id }}</small>
+                        </td>
+                        <td>{{ signup.ivt_event_date.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <form action="{{ url_for('coordinator_portal') }}" method="POST">
+                                <input type="hidden" name="form_type" value="approve_signup">
+                                <input type="hidden" name="user_id" value="{{ signup.ivs_user_id }}">
+                                <input type="hidden" name="task_id" value="{{ signup.ivs_task_id }}">
+                                <button type="submit" class="btn btn-sm btn-success w-100">Approve Signup</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="alert alert-info">No pending signups for initial approval.</div>
+            {% endif %}
+        </div>
+        
+        {# -------------------------------------------------------------------------------- #}
+        {# 3. FINAL TASK APPROVAL (Coordinator Role) #}
+        {# -------------------------------------------------------------------------------- #}
+        <div class="tab-pane fade p-3" id="approveTasks" role="tabpanel">
+            <h3 class="mt-4 mb-3">Tasks Ready for Final Coordinator Approval</h3>
+            <p class="text-muted">These are completed tasks where volunteers have submitted notes. Verify completion and approve hours.</p>
+
+            {% if final_approvals %}
+            <table class="table table-striped table-bordered">
+                <thead class="thead-primary">
+                    <tr>
+                        <th>User</th>
+                        <th>Task Title</th>
+                        <th>Volunteer Notes</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for approval in final_approvals %}
+                    <tr>
+                        <td>{{ approval.ivu_username }}</td>
+                        <td>{{ approval.ivt_title }} (Date: {{ approval.ivt_event_date.strftime('%Y-%m-%d') }})</td>
+                        <td>
+                            <pre class="alert alert-secondary" style="white-space: pre-wrap; margin: 0; font-size: 0.9em;">{{ approval.ivs_notes }}</pre>
+                        </td>
+                        <td>
+                            <form action="{{ url_for('coordinator_portal') }}" method="POST" style="display:inline;">
+                                <input type="hidden" name="form_type" value="approve_tasks">
+                                <input type="hidden" name="user_id" value="{{ approval.ivs_user_id }}">
+                                <input type="hidden" name="task_id" value="{{ approval.ivs_task_id }}">
+                                <button type="submit" class="btn btn-sm btn-primary">Final Approve</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="alert alert-success">No completed tasks are currently awaiting final coordinator approval.</div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+
+{# Requires Bootstrap 4 and jQuery/Popper.js for tabs to function, assuming your layout.html includes them #}
+<script>
+    $(document).ready(function(){
+        // Activate the first tab on page load
+        $('#coordinatorTabs a:first').tab('show'); 
+        
+        // Handle persistent tab if needed (optional)
+        $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+            localStorage.setItem('activeTab', $(e.target).attr('href'));
+        });
+        
+        var activeTab = localStorage.getItem('activeTab');
+        if(activeTab){
+            $('#coordinatorTabs a[href="' + activeTab + '"]').tab('show');
+        }
+    });
+</script>
+
+{% endblock %}

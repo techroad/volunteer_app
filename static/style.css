@@ -1,10 +1,11 @@
 /* General Body & Font Styling */
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
-    color: #333;
+    background-color: #cfddf4;
+    color: #333333; 
     margin: 0;
     padding: 0;
+    
 }
 
 .container {
@@ -16,7 +17,7 @@ body {
 
 /* Navigation Bar */
 nav {
-    background: #333;
+    background: #de9f16;
     color: #fff;
     padding: 10px 10%;
     display: flex;
@@ -48,9 +49,7 @@ nav a {
     font-size: 16px;
 }
 
-nav a:hover {
-    text-decoration: underline;
-}
+
 
 /* Forms */
 .form-container {
@@ -80,6 +79,8 @@ nav a:hover {
     border-radius: 4px;
 }
 
+
+
 .btn {
     display: inline-block;
     background: #5cb85c;
@@ -99,6 +100,7 @@ nav a:hover {
 
 .btn:hover:not(:disabled) {
     background: #4cae4c;
+   
 }
 
 /* Task Cards */
@@ -118,6 +120,9 @@ nav a:hover {
 .task-card h2 {
     margin-top: 0;
 }
+
+
+
 
 /* Alerts / Flash Messages */
 .alert {
@@ -144,4 +149,14 @@ nav a:hover {
     color: #31708f;
     background-color: #d9edf7;
     border-color: #bce8f1;
+}
+.portal-logo {
+    height: 50px;
+    width: auto;
+    display: block;
+
+}
+.portal-title {
+    font-size: 1.5rem;
+    font-weight: bold;
 }

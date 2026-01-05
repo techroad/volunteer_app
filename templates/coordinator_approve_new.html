@@ -1,0 +1,166 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+
+
+<div class="container mt-5">
+
+    <div class="row justify-content-center mb-5">
+
+        <div class="col-md-4 mb-3">
+            <a href="#create_task_form" class="text-decoration-none">
+                <div class="card text-center border-primary shadow-sm h-100 tile-hover">
+                    <div class="card-body">
+                        <i class="fa fa-user-plus fa-3x mb-3 text-primary"></i>
+                        <h5 class="card-title">New Volunteering Task</h5>
+                        <p class="card-text text-muted">Create new task</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <a href="#approve_tasks_form" class="text-decoration-none">
+                <div class="card text-center border-primary shadow-sm h-100 tile-hover">
+                    <div class="card-body">
+                        <i class="fa fa-user-cog fa-3x mb-3 text-primary"></i>
+                        <h5 class="card-title">Approve Tasks</h5>
+                        <p class="card-text text-muted">Approve past tasks by user</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <hr class="my-5">
+
+    <div id="create_task_form" class="form-container mb-5 p-4 border rounded shadow-lg">
+        <h3 class="mb-4 text-success">Add a New Volunteering Task</h3>
+        <form method="POST" action="">
+            <input type="hidden" name="form_type" value="create_task">
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="title">Title</label>
+                        <input type="text" id="title" name="title" class="form-control" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="description">Description</label>
+                        <textarea id="description" name="description" class="form-control" rows="3" required></textarea>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="event_date">Date</label>
+                        <input type="date" id="event_date" name="event_date" class="form-control" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="location">Location</label>
+                        <input type="text" id="location" name="location" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="category">Category</label>
+                        <select name="category" id="category" class="form-control" required>
+                            <option value="" disabled selected>Select a Category</option>
+                            {% for category in categories %}
+                            <option value="{{ category }}">{{ category }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="assigned_coordinator">Coordinator Assigned</label>
+                        <select name="assigned_coordinator" id="assigned_coordinator" class="form-control" required>
+                            <option value="" disabled selected>Select a Coordinator</option>
+                            {% for coordinator in coordinators %}
+                            <option value="{{ coordinator }}">{{ coordinator }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="event_start_time">Start Time</label>
+                        <input type="text" id="event_start_time" name="event_start_time" class="form-control" placeholder="e.g., 9:00 AM" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="event_duration">Duration (Hours)</label>
+                        <input type="number" step="0.5" id="event_duration" name="event_duration" class="form-control" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="no_of_volunteers_required">Volunteers Required</label>
+                        <input type="number" id="no_of_volunteers_required" name="no_of_volunteers_required" class="form-control" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="coordinator_poc">Coordinator (POC Name)</label>
+                        <input type="text" id="coordinator_poc" name="coordinator_poc" class="form-control" required>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-success w-100 mt-3">Save Task</button>
+        </form>
+    </div>
+
+    <div id="approve_tasks_form" class="form-container mb-5 p-4 border rounded shadow-lg">
+        <form method="POST" action=""></form>
+        <h3 class="mb-4 text-success">Review user notes and approve their completed tasks</h3>
+        <hr>
+        {% if tasks %}
+        <div class="task-list">
+            {% for task in tasks %}
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0">{{ task.title }}</h5>
+                        <small>Volunteer: <strong>{{ task.username }}</strong> | Date: {{
+                            task.ivt_event_date.strftime('%Y-%m-%d') }}</small>
+                    </div>
+                    <div>
+                        {% if task.is_approved and task.notes and not task.is_coordinator_approved %}
+                        <form action="{{ url_for('handle_coordinator_approval',
+                            user_id=task.user_id, task_id=task.task_id) }}" method="POST"
+                            style="margin:0;">
+                            <button type="submit" class="btn btn-success" title="Final Approve">
+                                <i class="fas fa-check-double"></i> Approve
+                            </button>
+                        </form>
+                        {% elif task.is_coordinator_approved %}
+                        <button class="btn btn-outline-success" disabled>
+                            <i class="fas fa-check-double"></i> Approved
+                        </button>
+                        {% else %}
+                        <button class="btn btn-secondary" disabled title="Not ready for approval">
+                            <i class="fas fa-times"></i> Approve
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if task.notes %}
+                    <h6 class="card-subtitle mb-2 text-muted">User's Notes:</h6>
+                    <p class="card-text bg-light p-3 rounded" style="white-space: pre-wrap;">{{ task.notes }}</p>
+                    {% else %}
+                    <p class="card-text text-muted"><em>Waiting for user to submit their notes.</em></p>
+                    {% endif %}
+                </div>
+                <div class="card-footer text-muted">
+                    Status:
+                    {% if task.is_coordinator_approved %}
+                    <span class="badge bg-success">Completed & Approved</span>
+                    {% elif not task.is_approved %}
+                    <span class="badge bg-secondary">Pending Admin Approval</span>
+                    {% elif not task.notes %}
+                    <span class="badge bg-warning text-dark">Pending User Notes</span>
+                    {% else %}
+                    <span class="badge bg-primary">Ready for Your Approval</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>There are no past tasks to display at this time.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

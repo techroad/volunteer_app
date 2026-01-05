@@ -1,0 +1,72 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+
+<div class="container mt-5">
+<h1>Coordinator Task Queue</h1>
+<p class="lead">Review user notes and approve their completed tasks.</p>
+<hr>
+{% if tasks %}
+<div class="task-list">
+{% for task in tasks %}
+<div class="card mb-3">
+<div class="card-header d-flex justify-content-between align-items-center">
+<div>
+<h5 class="mb-0">{{ task.title }}</h5>
+<small>Volunteer: <strong>{{ task.ivu_username }}</strong> | Date: {{
+task.ivt_event_date.strftime('%Y-%m-%d') }}</small>
+</div>
+<div>
+{# --- ACTION BUTTON LOGIC --- #}
+{# This button is ONLY active when admin has approved AND notes exist #}
+{% if task.is_approved and task.notes and not task.is_coordinator_approved %}
+<form action="{{ url_for('handle_coordinator_approval',
+user_id=task.user_id, task_id=task.task_id) }}" method="POST"
+style="margin:0;">
+<button type="submit" class="btn btn-success" title="Final Approve">
+<i class="fas fa-check-double"></i> Approve
+</button>
+</form>
+{% elif task.is_coordinator_approved %}
+<button class="btn btn-outline-success" disabled>
+<i class="fas fa-check-double"></i> Approved
+</button>
+{% else %}
+<button class="btn btn-secondary" disabled title="Not ready for approval">
+<i class="fas fa-times"></i> Approve
+</button>
+{% endif %}
+</div>
+</div>
+<div class="card-body">
+{# --- NOTES DISPLAY SECTION --- #}
+{% if task.notes %}
+<h6 class="card-subtitle mb-2 text-muted">User's Notes:</h6>
+<p class="card-text bg-light p-3 rounded" style="white-space:
+pre-wrap;">{{ task.notes }}</p>
+{% else %}
+<p class="card-text text-muted"><em>Waiting for user to submit their
+notes.</em></p>
+{% endif %}
+</div>
+<div class="card-footer text-muted">
+{# --- STATUS FOOTER --- #}
+Status:
+{% if task.is_coordinator_approved %}
+<span class="badge bg-success">Completed & Approved</span>
+{% elif not task.is_approved %}
+<span class="badge bg-secondary">Pending Admin Approval</span>
+{% elif not task.notes %}
+<span class="badge bg-warning text-dark">Pending User Notes</span>
+{% else %}
+<span class="badge bg-primary">Ready for Your Approval</span>
+{% endif %}
+</div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<p>There are no past tasks to display at this time.</p>
+{% endif %}
+</div>
+{% endblock %}

@@ -3,21 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Volunteer Hub</title>
+    <title>SeVaKa</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <nav>
-        <a href="{{ url_for('index') }}" class="logo">Volunteer Hub</a>
+        <a href="{{ url_for('index') }}" class="logo" title="Back to Homepage">
+            <img
+                src="static/images/jss_spiritual_logo.png"
+                class="portal-logo"
+            />
+        </a>
+        <span class="portal-title">iSeVaKa</span>
         <ul>
             {% if session.logged_in %}
                 {% if session.is_admin %}
                     <li><a href="{{ url_for('admin') }}">Admin Dashboard</a></li>
                 {% endif %}
+                {% if session.is_coordinator %}
+                    <li><a href="{{ url_for('admin') }}">Coordinator Dashboard</a></li>
+                {% endif %}
                 <li><a href="{{ url_for('logout') }}">Logout</a></li>
             {% else %}
                 <li><a href="{{ url_for('login') }}">Login</a></li>
-                <li><a href="{{ url_for('register') }}">Register</a></li>
+                
             {% endif %}
         </ul>
     </nav>

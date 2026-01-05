@@ -21,47 +21,42 @@ mysql = MySQL(app)
 ## Home / Landing Page
 @app.route('/', methods=['GET'])
 def index():
-    if 'logged_in' not in session or not session['logged_in']:
-        # If the user is not logged in, force them to the login page.
-        flash('Login in as Volunteer / Coordinator', 'info')
-        return redirect(url_for('login'))
-    
     tasks = []
     signed_up_task_ids = set()
     past_tasks = []
     tasks_duration = []
-    approved_task_ids = set()
     try:
         cur = mysql.connection.cursor()
         # Get all tasks
-        cur.execute("SELECT * FROM isewa_vln_tasks where ivt_event_date >= current_date AND ivt_no_of_volunteers_required > ivt_no_of_volunteers_already_signedup AND ivt_is_admin_approved = 1 ORDER BY ivt_event_date ASC")
+        cur.execute("SELECT * FROM isewa_vln_tasks where ivt_event_date >= current_date AND ivt_no_of_volunteers_required > ivt_no_of_volunteers_already_signedup ORDER BY ivt_event_date ASC")
         tasks = cur.fetchall()
         cur.close()
-        
+        #signed_up_task_ids = set()
+        #past_tasks = []
+        #tasks_duration = []
         if 'user_id' in session:
             user_id = session['user_id']
             cur = mysql.connection.cursor()
-        
+            print(user_id)
             cur.execute("SELECT ivs_task_id FROM isewa_vln_signups WHERE ivs_user_id = %s", [user_id])
             signed_up_tasks = cur.fetchall()
+            cur.close()
             signed_up_task_ids = {item['ivs_task_id'] for item in signed_up_tasks}
-            
-            cur.execute("SELECT ivs_task_id FROM isewa_vln_signups WHERE ivs_user_id = %s AND ivs_is_approved = 1", [user_id])
-            approved_tasks = cur.fetchall()
-            approved_task_ids = {item['ivs_task_id'] for item in approved_tasks}
-            print(approved_task_ids)
-            
+            print(signed_up_task_ids)
+            cur = mysql.connection.cursor()
             cur.execute("SELECT a.ivt_id,a.ivt_title,a.ivt_event_date,a.ivt_description,a.ivt_location,b.ivs_notes,b.ivs_is_approved,b.ivs_is_coordinator_approved from isewa_vln_tasks a, isewa_vln_signups b WHERE a.ivt_id = b.ivs_task_id and b.ivs_user_id = %s order by a.ivt_event_date", [user_id])
             past_tasks = cur.fetchall()
+            cur.close
             
+            cur = mysql.connection.cursor()
             cur.execute("select sum(a.ivt_event_duration) as total_duration from isewa_vln_tasks a, isewa_vln_signups b where a.ivt_id = b.ivs_task_id and b.ivs_user_id = %s", [user_id])
             tasks_duration = cur.fetchall()
             
             cur.close
-            
+            print(signed_up_task_ids)
     except Exception as e:
         return f"An unexpected error occurred: {e}"   
-    return render_template('index.html', tasks=tasks, signed_up_task_ids=signed_up_task_ids, approved_task_ids=approved_task_ids, current_date=date.today(), past_tasks=past_tasks,tasks_duration=tasks_duration)
+    return render_template('index.html', tasks=tasks, signed_up_task_ids=signed_up_task_ids, current_date=date.today(), past_tasks=past_tasks,tasks_duration=tasks_duration)
 
 @app.route('/add_note/<int:task_id>', methods=['POST'])
 def add_note(task_id):
@@ -144,13 +139,13 @@ def login():
                 session['user_id'] = data['ivu_id'] # Store user ID in session
                 session['is_coordinator'] = data['ivu_is_coordinator'] # Store coordinator status in session
                 
-                flash('You are now logged in as ', 'success')
+                flash('You are now logged in', 'success')
                 
                 cur.execute("UPDATE isewa_vln_users SET ivu_user_last_login = current_timestamp WHERE ivu_username = %s",[username])
                 mysql.connection.commit()
 
                 if session['is_coordinator']:
-                    return redirect(url_for('coordinator_portal'))
+                    return redirect(url_for('coordinator_approve'))
                 if session['is_admin']:
                     return redirect(url_for('admin'))
                 return redirect(url_for('index'))
@@ -191,13 +186,6 @@ def admin():
         flash(f'Error fetching coordinators: {str(e)}', 'danger')
         coordinators = []
     
-    try:
-        cur.execute("SELECT ivt_id, ivt_title, ivt_description, ivu_username, ivt_event_date, ivt_location, ivt_event_start_time, ivt_event_duration, ivt_no_of_volunteers_required, ivt_category, ivt_coordinator_poc FROM isewa_vln_tasks a join isewa_vln_users b where a.ivt_task_approval_coordinator = b.ivu_id AND ivt_is_admin_approved = 0")
-        pending_tasks = cur.fetchall()
-        print(pending_tasks)
-    except Exception as e:
-        flash(f'Error fetching coordinators: {str(e)}', 'danger')
-        pending_tasks = []
     cur.close()     
     
     if request.method == 'POST':
@@ -292,9 +280,11 @@ def admin():
             coordinator_poc = request.form.get('coordinator_poc')
             assigned_coordinator = request.form.get('assigned_coordinator')
             coordinator_id = cur.execute("SELECT ivu_id FROM isewa_vln_users WHERE ivu_username = %s AND ivu_is_active = 'Y'", [assigned_coordinator])
-           
+            print(assigned_coordinator)
+            print(coordinator_id)
+
             # Your existing task creation database code...
-           
+            print(title,task_category)
             cur.execute("INSERT INTO isewa_vln_tasks(ivt_title, ivt_description, ivt_event_date, ivt_location, ivt_event_start_time, ivt_event_duration, ivt_no_of_volunteers_required, ivt_category, ivt_coordinator_poc, ivt_task_approval_coordinator) VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                         (title, description, event_date, location, event_start_time, event_duration, no_of_volunteers_required, task_category, coordinator_poc, coordinator_id))
             mysql.connection.commit()
@@ -303,21 +293,6 @@ def admin():
             flash('Task Created', 'success')
             return redirect(url_for('admin'))
         
-        # Handle approve tasks
-        elif form_type == 'approve_task':
-            
-            cur = mysql.connection.cursor()
-            try:
-                task_id = request.form.get('task_id')
-                print(task_id)
-                cur.execute("UPDATE isewa_vln_tasks SET ivt_is_admin_approved = 1 where ivt_id = %s",[task_id])
-                mysql.connection.commit()
-                flash(f'Task ID {task_id} approved and published!', 'success')
-            except Exception as e:
-                flash(f'Error approving task: {str(e)}', 'danger')
-
-            return redirect(url_for('admin'))
-
         # Handle cases where form_type might be missing or unexpected
         else:
              flash('Invalid form submission.', 'danger')
@@ -326,147 +301,129 @@ def admin():
     if cur:
         cur.close()
     # GET request: Render the dashboard page
-    return render_template('admin.html',categories=categories, coordinators=coordinators, pending_tasks=pending_tasks)
+    return render_template('admin.html',categories=categories, coordinators=coordinators)
 
-# --- COORDINATOR PORTAL ---
-@app.route('/coordinator/portal', methods=['GET', 'POST'])
-def coordinator_portal():
-    # === SECURITY CHECK ===
+
+## COORDINATOR APPROVAL PORTAL ##
+
+@app.route('/coordinator/approve')
+def coordinator_approve():
+# Security: Ensure user is a logged-in coordinator
     if not session.get('logged_in') or not session.get('is_coordinator'):
-        flash('Unauthorized. Please log in as a coordinator.', 'danger')
-        return redirect(url_for('login'))
-
+        flash('You do not have permission to access this page.', 'danger')
+        return redirect(url_for('index'))
+    
     cur = mysql.connection.cursor()
+    # Fetch tasks that are:
+    # 1. Approved by an Admin (is_approved = 1)
+    # 2. Have notes submitted by the user (notes are not empty)
+    # 3. Not yet approved by a Coordinator (is_coordinator_approved = 0)
     
-    # === HANDLE POST REQUESTS (Actions) ===
-    if request.method == 'POST':
-        form_type = request.form.get('form_type')
-
-        # --- 1. HANDLE TASK CREATION ---
-        if form_type == 'create_task':
-            try:
-                title = request.form.get('title')
-                description = request.form.get('description')
-                event_date = request.form.get('event_date')
-                location = request.form.get('location')
-                task_category = request.form.get('category')
-                event_start_time = request.form.get('event_start_time')
-                event_duration = request.form.get('event_duration')
-                no_of_volunteers_required = request.form.get('no_of_volunteers_required')
-                coordinator_poc = request.form.get('coordinator_poc')
-                assigned_coordinator = request.form.get('assigned_coordinator')
-
-                # Fetch coordinator ID (FIXED SQL LOGIC)
-                cur.execute("SELECT ivu_id FROM isewa_vln_users WHERE ivu_username = %s AND ivu_is_active = 'Y'", [assigned_coordinator])
-                coordinator_data = cur.fetchone()
-                coordinator_id = coordinator_data['ivu_id'] if coordinator_data else None
-
-                if not coordinator_id:
-                    flash('Error: Assigned coordinator not found.', 'danger')
-                    return redirect(url_for('coordinator_portal'))
-
-                cur.execute("INSERT INTO isewa_vln_tasks(ivt_title, ivt_description, ivt_event_date, ivt_location, ivt_event_start_time, ivt_event_duration, ivt_no_of_volunteers_required, ivt_category, ivt_coordinator_poc, ivt_task_approval_coordinator,ivt_task_created_by,ivt_task_modified_by,ivt_task_created_at,ivt_task_last_upd_ts) VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s,%s, current_timestamp, current_timestamp)",
-                            (title, description, event_date, location, event_start_time, event_duration, no_of_volunteers_required, task_category, coordinator_poc, coordinator_id, assigned_coordinator, assigned_coordinator))
-                
-                mysql.connection.commit()
-                flash('Task Created Successfully!', 'success')
-            except Exception as e:
-                flash(f'Error creating task: {str(e)}', 'danger')
-            
-            return redirect(url_for('coordinator_portal'))
-
-        # --- 2. HANDLE SIGNUP APPROVAL (Admin-like function) ---
-        elif form_type == 'approve_signup':
-            try:
-                user_id = request.form.get('user_id')
-                task_id = request.form.get('task_id')
-                print(user_id)
-                print(task_id)
-                cur.execute("""
-                    UPDATE isewa_vln_signups
-                    SET ivs_is_approved = 1
-                    WHERE ivs_user_id = %s AND ivs_task_id = %s
-                """, (user_id, task_id))
-                mysql.connection.commit()
-                flash('Volunteer participation approved!', 'success')
-            except Exception as e:
-                flash(f'Error approving signup: {str(e)}', 'danger')
-
-            return redirect(url_for('coordinator_portal'))
-            
-        # --- 3. HANDLE FINAL VOLUNTEERING TASK APPROVAL (Coordinator role) ---
-        elif form_type == 'approve_tasks':
-            try:
-                user_id = request.form.get('user_id')
-                task_id = request.form.get('task_id')
-                
-                cur.execute("""
-                    UPDATE isewa_vln_signups
-                    SET ivs_is_coordinator_approved = 1
-                    WHERE ivs_user_id = %s AND ivs_task_id = %s
-                """, (user_id, task_id))
-                mysql.connection.commit()
-                flash('Task has been successfully approved!', 'success')
-            except Exception as e:
-                flash(f'Error approving task: {str(e)}', 'danger')
-
-            return redirect(url_for('coordinator_portal'))
-            
-    # === HANDLE GET REQUESTS (Data Fetching) ===
+    session_user = session.get('user_id')
     
-    # 1. Fetch Lists for Forms
+    #cur.execute("UPDATE isewa_vln_users SET ivu_user_last_login = current_timestamp where ivu_id = %s", [session_user])
     try:
         cur.execute("SELECT ivc_category FROM isewa_vln_category")
         categories = [row["ivc_category"] for row in cur.fetchall()]
-        
-        cur.execute("SELECT ivu_username FROM isewa_vln_users WHERE ivu_is_coordinator = 1 AND ivu_is_active = 'Y'")
+    except Exception as e:
+        flash(f'Error fetching categories: {str(e)}', 'danger')
+        categories = []
+
+    try:
+        cur.execute("SELECT ivu_username FROM isewa_vln_users where ivu_is_coordinator = 1 AND ivu_is_active = 'Y'")
         coordinators = [row["ivu_username"] for row in cur.fetchall()]
     except Exception as e:
-        categories = []
+        flash(f'Error fetching coordinators: {str(e)}', 'danger')
         coordinators = []
-        flash(f'Error fetching form data: {str(e)}', 'danger')
 
-    # 2. Fetch Pending Signups (Admin-like Approval)
-    # Tasks where user signed up, but admin approval is pending (is_approved = 0)
     cur.execute("""
-        SELECT 
-            s.ivs_user_id, s.ivs_task_id, s.ivs_is_approved,
-            u.ivu_username,
-            t.ivt_title, t.ivt_event_date
-        FROM isewa_vln_signups s
-        JOIN isewa_vln_users u ON s.ivs_user_id = u.ivu_id
-        JOIN isewa_vln_tasks t ON s.ivs_task_id = t.ivt_id
-        WHERE s.ivs_is_approved = 0 AND t.ivt_event_date >= CURDATE()
-        ORDER BY t.ivt_event_date ASC
+    SELECT
+    s.ivs_user_id, s.ivs_task_id, s.ivs_is_approved, s.ivs_notes, s.ivs_is_coordinator_approved,
+    u.ivu_username,
+    t.ivt_title, t.ivt_event_date
+    FROM isewa_vln_signups s
+    JOIN isewa_vln_users u ON s.ivs_user_id = u.ivu_id
+    JOIN isewa_vln_tasks t ON s.ivs_task_id = t.ivt_id
+    WHERE t.ivt_event_date < CURDATE()
+    ORDER BY t.ivt_event_date DESC, u.ivu_username ASC
     """)
-    pending_signups = cur.fetchall()
-
-    # 3. Fetch Final Task Approvals (Coordinator Approval)
-    # Tasks where: (is_approved = 1), (notes exist), (is_coordinator_approved = 0)
-    cur.execute("""
-        SELECT
-            s.ivs_user_id, s.ivs_task_id, s.ivs_is_approved, s.ivs_notes, s.ivs_is_coordinator_approved,
-            u.ivu_username,
-            t.ivt_title, t.ivt_event_date
-        FROM isewa_vln_signups s
-        JOIN isewa_vln_users u ON s.ivs_user_id = u.ivu_id
-        JOIN isewa_vln_tasks t ON s.ivs_task_id = t.ivt_id
-        WHERE s.ivs_is_approved = 1 
-          AND s.ivs_notes IS NOT NULL 
-          AND s.ivs_is_coordinator_approved = 0
-          AND t.ivt_event_date < CURDATE()
-        ORDER BY t.ivt_event_date DESC
-    """)
-    final_approvals = cur.fetchall()
-    
+    pending_tasks = cur.fetchall()
     cur.close()
+
+    return render_template('coordinator_approve_new.html', categories=categories, coordinators=coordinators,tasks=pending_tasks)
+
+## HANDLER FOR COORDINATOR APPROVAL ##
+@app.route('/coordinator/tasks/manage', methods=['GET','POST'])
+
+def coordinator_manage_tasks():
+
+    if not session.get('logged_in') or not session.get('is_coordinator'):
+        flash('Unauthorized action.', 'danger')
+        return redirect(url_for('index'))
     
-    return render_template('coordinator_portal.html', 
-        categories=categories, 
-        coordinators=coordinators,
-        pending_signups=pending_signups,
-        final_approvals=final_approvals
-    )
+    if request.method == 'POST':
+        form_type = request.form.get('form_type')
+        print(form_type)
+        if form_type == 'create_tasks':
+            print("DEBUG2")
+            cur = mysql.connection.cursor()
+            title = request.form.get('title')
+            description = request.form.get('description')
+            event_date = request.form.get('event_date')
+            location = request.form.get('location')
+            task_category = request.form.get('category')
+            event_start_time = request.form.get('event_start_time')
+            event_duration = request.form.get('event_duration')
+            no_of_volunteers_required = request.form.get('no_of_volunteers_required')
+            coordinator_poc = request.form.get('coordinator_poc')
+            assigned_coordinator = request.form.get('assigned_coordinator')
+            coordinator_id = cur.execute("SELECT ivu_id FROM isewa_vln_users WHERE ivu_username = %s AND ivu_is_active = 'Y'", [assigned_coordinator])
+            print(assigned_coordinator)
+            print(coordinator_id)
+
+            # Your existing task creation database code...
+            print(title,task_category)
+            cur.execute("INSERT INTO isewa_vln_tasks(ivt_title, ivt_description, ivt_event_date, ivt_location, ivt_event_start_time, ivt_event_duration, ivt_no_of_volunteers_required, ivt_category, ivt_coordinator_poc, ivt_task_approval_coordinator) VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        (title, description, event_date, location, event_start_time, event_duration, no_of_volunteers_required, task_category, coordinator_poc, coordinator_id))
+            mysql.connection.commit()
+            cur.close()
+            
+            flash('Task Created', 'success')
+            return redirect(url_for('coordinator_manage_tasks'))
+        
+    return redirect(url_for('coordinator_approve_new'))
+        
+
+@app.route('/coordinator/approve<int:user_id>/<int:task_id>', methods=['GET','POST'])
+
+def handle_coordinator_approval(user_id, task_id):
+# Security: Ensure user is a logged-in coordinator
+    
+    if not session.get('logged_in') or not session.get('is_coordinator'):
+        flash('Unauthorized action.', 'danger')
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        form_type = request.form.get('form_type')
+        print(form_type)
+
+    if form_type == 'approve_tasks':
+
+        cur = mysql.connection.cursor()
+
+        cur.execute("""
+            UPDATE isewa_vln_signups
+            SET is_coordinator_approved = 1
+            WHERE ivs_user_id = %s AND ivs_task_id = %s
+        """, (user_id, task_id))
+
+        mysql.connection.commit()
+        cur.close()
+
+        flash('Task has been successfully approved!', 'success')
+        return redirect(url_for('coordinator_approve_new'))
+
+    return redirect(url_for('coordinator_approve_new'))
 
 ## Sign Up for a Task
 @app.route('/signup/<int:task_id>', methods=['POST'])

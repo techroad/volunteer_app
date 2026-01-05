@@ -1,25 +1,43 @@
 {% extends 'layout.html' %}
 
 {% block body %}
-    <h1>Upcoming Volunteer Opportunities</h1>
+    <h1>My Volunteering Contribution</h1>
+    <div class="task-list">
+        {% for task in tasks_duration %}
+            <div class="task-card">
+                <h2>{{ task.title }}</h2>
+                <p><strong>Total Duration (HRS)</strong> {{ task.total_duration }}</p>
+            </div>
+        {% endfor %}
+    </div>
+    <head>
+        <link rel="icon" type="image/png" href="C:\Users\mbrav\isewa\static\images\jss_spiritual_logo.png"">
+    </head>
+    <h1>Upcoming Volunteering Opportunities</h1>
     <div class="task-list">
         {% for task in tasks %}
             <div class="task-card">
                 <h2>{{ task.title }}</h2>
-                <p><strong>Date:</strong> {{ task.event_date.strftime('%A, %B %d, %Y') }}</p>
-                <p><strong>Duration</strong> {{ task.event_duration }}</p>
-                <p><strong>Location:</strong> {{ task.location }}</p>
-                <p><strong>Event Start Time</strong> {{ task.event_start_time }}</p>
-                <p><strong>Duration</strong> {{ task.event_duration}}</p>
-                <p><strong>No of volunteers required</strong> {{task.no_of_volunteers_required}}</p>
-                <p>{{ task.description }}</p>
+                <p><strong>Date:</strong> {{ task.ivt_event_date.strftime('%A, %B %d, %Y') }}</p>
+                <p><strong>Duration (HRS):</strong> {{ task.ivt_event_duration }}</p>
+                <p><strong>Location:</strong> {{ task.ivt_location }}</p>
+                <p><strong>Event Start Time:</strong> {{ task.ivt_event_start_time }}</p>
+                <p><strong>No of volunteers required:</strong> {{task.ivt_no_of_volunteers_required}}</p>
+                <p><strong>Coordinator:</strong> {{task.ivt_coordinator_poc}}</p>
+                <p><strong>Information:</strong> {{ task.ivt_description }}</p>
                 {% if session.logged_in and not session.is_admin %}
-                    <form action="{{ url_for('signup', task_id=task.id) }}" method="POST">
-                        {% if task.id in signed_up_task_ids %}
-                             <button type="submit" class="btn" disabled>Already Signed Up</button>
-                        {% else %}
+                    <form action="{{ url_for('signup', task_id=task.ivt_id) }}" method="POST">
+                       
+                            {% if task.ivt_id in signed_up_task_ids %}
+                                {% if task.ivt_id in approved_task_ids %}
+                                    <button type="submit" class="btn" disabled>Approved Signed Up</button>
+                                {% else %}
+                                    <button type="submit" class="btn" disabled>Already Signed Up</button>
+                                {% endif %}
+                            {% else %}
                             <button type="submit" class="btn">Sign Up</button>
                         {% endif %}
+                       
                     </form>
                 {% endif %}
             </div>
@@ -27,4 +45,57 @@
             <p>No tasks available at the moment. Check back soon!</p>
         {% endfor %}
     </div>
+    <h1>Past Volunteering Opportunities</h1>
+    <div class="task-list">
+        {% for task in past_tasks %}
+            <div class="task-card">
+                {% if session.logged_in and not session.is_admin %}
+                    <form action="{{ url_for('signup', task_id=task.ivt_id) }}" method="POST">
+                    {% if task.ivt_event_date < current_date %}
+                        <h2>{{ task.title }}</h2>
+                        <p><strong>Date:</strong> {{ task.ivt_event_date.strftime('%A, %B %d, %Y') }}</p>
+                        <p><strong>Duration (HRS)</strong> {{ task.ivt_event_duration }}</p>
+                        <p><strong>Location:</strong> {{ task.ivt_location }}</p>
+                        <p><strong>Coordinator</strong> {{ task.ivt_coordinator_poc}}</p>
+                        <p>{{ task.ivt_description }}</p>
+                    </form>
+        <hr>
+<h4 class="mb-3">Status & Notes</h4>
+
+{# 1. Check if Admin has approved participation #}
+{% if not task.is_approved %}
+<p class="text-muted"><em>Pending admin approval for participation.</em></p>
+
+{# 2. Admin approved, now check for notes #}
+{% elif not task.notes %}
+<form action="{{ url_for('add_note', task_id=task.ivt_id) }}" method="POST">
+<div class="form-group">
+<textarea name="note" class="form-control" rows="3" placeholder="Add
+your notes here..."></textarea>
+</div>
+<button type="submit" class="btn btn-primary mt-2">Save Note</button>
+</form>
+
+{# 3. Notes are added, now check for Coordinator approval #}
+{% elif not task.is_coordinator_approved %}
+<p><strong>Your Notes:</strong></p>
+<p class="alert alert-secondary" style="white-space: pre-wrap;">{{
+task.notes }}</p>
+<p class="text-info"><strong>Status:</strong> Pending final approval
+by a coordinator.</p>
+
+{# 4. Coordinator has given final approval #}
+{% else %}
+<p><strong>Your Notes:</strong></p>
+<p class="alert alert-secondary" style="white-space: pre-wrap;">{{
+task.notes }}</p>
+<p class="text-success"><strong>Status:</strong> <i class="fas
+fa-check-circle"></i> Approved and completed!</p>
+{% endif %}
+{% endif %}
+{% endif %}
+</div>
+{% endfor %}
+</div>
+
 {% endblock %}
